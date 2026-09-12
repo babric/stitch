@@ -110,14 +110,20 @@ public class CommandFixNesting extends Command {
 								(reader = new ClassReader(oldJarFile.getInputStream(entry))).accept(node = new ClassNode(), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 							}
 
-							if (node.innerClasses.stream().map(inner -> inner.name).noneMatch(clazz.getFullyQualifiedName()::equals)) {
+							//A $ in the name doesn't prove the enclosing class is in the jar: mappings can rename an outer
+							//class without renaming the classes nested inside it, which leaves a nested looking name whose
+							//parent belongs to nothing. Attributes synthesized from such a name point at a class that can't
+							//be resolved, so leave those classes as they are.
+							String parent = getParent(clazz.getFullyQualifiedName());
+							boolean parentPresent = parent != null && oldJarFile.getEntry(parent + ".class") != null;
+
+							if (parentPresent && node.innerClasses.stream().map(inner -> inner.name).noneMatch(clazz.getFullyQualifiedName()::equals)) {
 								missingInners.add(clazz);
 							}
 
-							if (clazz.isAnonymous()) {//Anonymous classes mark parent classes by the outerClass attribute rather than the innerClass
-								String outer = getParent(clazz.getFullyQualifiedName());
-								if (!outer.equals(node.outerClass)) {
-									missingOuter = outer;
+							if (parentPresent && clazz.isAnonymous()) {//Anonymous classes mark parent classes by the outerClass attribute rather than the innerClass
+								if (!parent.equals(node.outerClass)) {
+									missingOuter = parent;
 								}
 							} //Classes in methods also do this, but they're more of a nuisance to detect without guessing from line numbers
 						}
