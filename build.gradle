@@ -8,7 +8,7 @@ plugins {
 sourceCompatibility = 1.8
 
 def ENV = System.getenv()
-version = "0.6.2-babric.1" + (ENV.GITHUB_ACTIONS ? "" : "+local")
+version = "0.6.2-babric.2" + (ENV.GITHUB_ACTIONS ? "" : "+local")
 
 group = 'babric'
 archivesBaseName = project.name.toLowerCase()
